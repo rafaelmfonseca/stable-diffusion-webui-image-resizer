@@ -1,8 +1,7 @@
 from PIL import Image,features
 import modules.scripts as scripts
 from modules import images
-from modules.processing import process_images
-from modules.processing import fix_seed
+from modules.processing import process_images, fix_seed
 from modules.shared import opts
 import io
 import gradio as gr
@@ -76,12 +75,11 @@ class Script(scripts.Script):
             args.extend(["/resize", f'{width}x{height}', f"{method}{params}"])
             args.extend(["/save", filename])
 
-            print(f'args={args}')
+            subprocess.run(args, capture_output=True, shell=False)
 
-            result = subprocess.run(args, capture_output=True, shell=False)
-
-            #result = subprocess.run([image_resizer_path, "/load", fullfn, "/resize", 'auto', 'XBR 3x(2)', "/resize", 'w1024', "HighQualityBilinear <GDI+>", "/save", filename], capture_output=True, shell=False)
-
-            # print(f'result={result}')
+            new_image = Image.open(filename).convert('RGB')
+            images.save_image(new_image, p.outpath_samples, f'resized_{i}.png', processed.all_seeds[i], processed.all_prompts[i], opts.samples_format, info=processed.info, p=p)
+            processed.images.insert(0, new_image)
 
         # os.remove(temp_image_path)
+        return processed
