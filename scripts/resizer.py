@@ -13,7 +13,6 @@ import uuid
 script_dir = scripts.basedir()
 image_resizer_path = os.path.join(script_dir, "2dimagefilter", "ImageResizer-r129.exe")
 
-# (width, height, horizontal, vertical)
 def interpolators_type_methods():
     handles = [ "NearestNeighbor <GDI+>", "Bilinear <GDI+>", "Bicubic <GDI+>", "HighQualityBilinear <GDI+>", "HighQualityBicubic <GDI+>" ]
     return [
@@ -32,7 +31,6 @@ def interpolators_type_methods():
         for item in handles
     ]
 
-# (width, height, horizontal, vertical, use_centered_grid)
 def kernels_type_methods():
     handles = [ "Rectangular", "Bicubic", "Schaum2", "Schaum3", "BSpline2", "BSpline3", "BSpline5", "BSpline7", "BSpline9", "BSpline11", "OMoms3", "OMoms5", "OMoms7" ]
     return [
@@ -51,7 +49,6 @@ def kernels_type_methods():
         for item in handles
     ]
 
-# (width, height, horizontal, vertical, use_centered_grid, radius)
 def windowing_functions_type_methods():
     handles = [ "Triangular", "Welch", "Hann", "Hamming", "Blackman", "Nuttal", "BlackmanNuttal", "BlackmanHarris", "FlatTop", "PowerOfCosine", "Cosine", "Gauss", "Tukey", "Poisson", "BartlettHann", "HanningPoisson", "Bohman", "Cauchy", "Lanczos" ]
     return [
@@ -70,8 +67,6 @@ def windowing_functions_type_methods():
         for item in handles
     ]
 
-# (horizontal, vertical, use_thresholds, repeat)
-# /resize auto
 def pixel_scaler_type_methods():
     handles = [ "-50% Scanlines", "+50% Scanlines", "+100% Scanlines", "-50% VScanlines", "+50% VScanlines", "+100% VScanlines", "MAME TV 2x", "MAME TV 3x", "MAME RGB 2x", "MAME RGB 3x", "Hawkynt TV 2x", "Hawkynt TV 3x", "Bilinear Plus Original", "Bilinear Plus", "Eagle 2x", "Eagle 3x", "Eagle 3xB", "SuperEagle", "SaI 2x", "Super SaI", "AdvInterp 2x", "AdvInterp 3x", "Scale 2x", "Scale 3x", "EPXB", "EPXC", "EPX3", "Reverse AA", "DES", "DES II", "2xSCL", "Super 2xSCL", "Ultra 2xSCL" ]
     return [
@@ -90,8 +85,6 @@ def pixel_scaler_type_methods():
         for item in handles
     ]
 
-# (horizontal, vertical, use_thresholds, repeat)
-# /resize auto
 def xbr_scaler_type_methods():
     handles = [ "XBR 2x <NoBlend>", "XBR 3x <NoBlend>", "XBR 3x (modified) <NoBlend>", "XBR 4x <NoBlend>", "XBR 2x", "XBR 3x", "XBR 3x (modified)", "XBR 4x", "XBR 5x (legacy)" ]
     return [
@@ -110,8 +103,6 @@ def xbr_scaler_type_methods():
         for item in handles
     ]
 
-# (horizontal, vertical, use_thresholds, repeat)
-# /resize auto
 def xbrz_scaler_type_methods():
     handles = [ "XBRz 2x", "XBRz 3x", "XBRz 4x", "XBRz 5x" ]
     return [
@@ -130,8 +121,6 @@ def xbrz_scaler_type_methods():
         for item in handles
     ]
 
-# (horizontal, vertical, use_thresholds, repeat)
-# /resize auto
 def nq_scaler_type_methods():
     handles = [ "HQ 2x", "HQ 2x Bold", "HQ 2x Smart", "HQ 2x3", "HQ 2x3 Bold", "HQ 2x3 Smart", "HQ 2x4", "HQ 2x4 Bold", "HQ 2x4 Smart", "HQ 3x", "HQ 3x Bold", "HQ 3x Smart", "HQ 4x", "HQ 4x Bold", "HQ 4x Smart", "LQ 2x", "LQ 2x Bold", "LQ 2x Smart", "LQ 2x3", "LQ 2x3 Bold", "LQ 2x3 Smart", "LQ 2x4", "LQ 2x4 Bold", "LQ 2x4 Smart", "LQ 3x", "LQ 3x Bold", "LQ 3x Smart", "LQ 4x", "LQ 4x Bold", "LQ 4x Smart" ]
     return [
@@ -150,8 +139,6 @@ def nq_scaler_type_methods():
         for item in handles
     ]
 
-# (horizontal, vertical)
-# /resize auto
 def planes_type_methods():
     handles = [ "Red", "Green", "Blue", "Alpha", "Luminance", "ChrominanceU", "ChrominanceV", "u", "v", "Hue", "Hue Colored", "Brightness", "Min", "Max", "ExtractColors", "ExtractDeltas" ]
     return [
@@ -223,7 +210,7 @@ class Script(scripts.Script):
                     with gr.Row():
                         use_thresholds = gr.Checkbox(label='Use Thresholds', value=False)
                     with gr.Row():
-                        repeat = gr.Slider(minimum=1, maximum=512, step=1, value=1, label="Repeat")
+                        repeat = gr.Slider(minimum=1, maximum=10, step=1, value=1, label="Repeat")
                     with gr.Row():
                         use_centered_grid = gr.Checkbox(label='Use Centered Grid', value=False)
                     with gr.Row():
@@ -247,13 +234,13 @@ class Script(scripts.Script):
 
             paramslist = []
 
-            if method["enable_use_thresholds"] and use_thresholds:
-                paramslist.append(f'thresholds=1')
+            if method["enable_use_thresholds"]:
+                paramslist.append(f'thresholds={use_thresholds and 1 or 0}')
             if method["enable_repeat"] and repeat:
                 paramslist.append(f'repeat={repeat}')
 
-            if method["enable_use_centered_grid"] and use_centered_grid:
-                paramslist.append(f'centered=1')
+            if method["enable_use_centered_grid"]:
+                paramslist.append(f'centered={use_centered_grid and 1 or 0}}')
             if method["enable_radius"] and radius:
                 paramslist.append(f'radius={radius}')
 
