@@ -13,10 +13,6 @@ import uuid
 script_dir = scripts.basedir()
 image_resizer_path = os.path.join(script_dir, "2dimagefilter", "ImageResizer-r129.exe")
 
-def borderPixelHandles():
-    handles = [ "None", "ConstantExtension", "HalfSampleSymmetric", "WholeSampleSymmetric", "WrapAround" ]
-    return handles
-
 # (width, height, horizontal, vertical)
 def interpolators_type_methods():
     handles = [ "NearestNeighbor <GDI+>", "Bilinear <GDI+>", "Bicubic <GDI+>", "HighQualityBilinear <GDI+>", "HighQualityBicubic <GDI+>" ]
@@ -75,10 +71,21 @@ def methods():
     return methods
 
 class Script(scripts.Script):
+    def __init__(self):
+        self.border_pixel_handles = [
+            { "label": "None", "value": "None" },
+            { "label": "ConstantExtension", "value": "const" },
+            { "label": "HalfSampleSymmetric", "value": "half" },
+            { "label": "WholeSampleSymmetric", "value": "whole" },
+            { "label": "WrapAround", "value": "wrap" }
+        ]
+
     def title(self):
         return "Image Resizer"
+        
     def show(self, is_img2img):
         return True
+
     def ui(self, is_img2img):
         gr.HTML("<br />")
         
@@ -96,8 +103,8 @@ class Script(scripts.Script):
             with gr.Column(scale=2):
                 with gr.Tabs():
                     with gr.TabItem('Border pixel handling'):
-                        pixel_handling_horizontally = gr.Dropdown(choices=borderPixelHandles(), label="Horizontally", value="None", type="value")
-                        pixel_handling_vertically = gr.Dropdown(choices=borderPixelHandles(), label="Vertically", value="None", type="value")
+                        hbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Horizontally", value=0, type="index")
+                        vbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Vertically", value=0, type="index")
 
         gr.HTML("<br />")
 
@@ -113,8 +120,9 @@ class Script(scripts.Script):
                     with gr.Row():
                         radius = gr.Slider(minimum=0.5, maximum=100, step=0.1, value=1, label="Radius")
         
-        return [method, width, height, pixel_handling_horizontally, pixel_handling_vertically, use_thresholds, repeat, use_centered_grid, radius]
-    def run(self, p, method, width, height, pixel_handling_horizontally, pixel_handling_vertically, use_thresholds, repeat, use_centered_grid, radius):
+        return [method, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius]
+
+    def run(self, p, method, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius):
         fix_seed(p)
         
         random_key = uuid.uuid4().hex
@@ -127,6 +135,7 @@ class Script(scripts.Script):
             filename = os.path.join(temp_image_path, f'output_{i}.png')
 
             paramslist = []
+            '''
             if use_thresholds:
                 paramslist.append(f'thresholds=1')
             if use_centered_grid:
@@ -135,10 +144,11 @@ class Script(scripts.Script):
                 paramslist.append(f'radius={radius}')
             if repeat:
                 paramslist.append(f'repeat={repeat}')
-            if pixel_handling_vertically != "None":
-                paramslist.append(f'vbounds={pixel_handling_vertically}')
-            if pixel_handling_horizontally != "None":
-                paramslist.append(f'hbounds={pixel_handling_horizontally}')
+            '''
+            if vbounds_index > 0:
+                paramslist.append(f'vbounds={self.border_pixel_handles[vbounds_index]["value"]}')
+            if hbounds_index > 0:
+                paramslist.append(f'hbounds={self.border_pixel_handles[hbounds_index]["value"]}')
 
             params = ""
             if len(paramslist) > 0:
@@ -150,11 +160,13 @@ class Script(scripts.Script):
             args.extend(["/resize", f'{width}x{height}', f"{method}{params}"])
             args.extend(["/save", filename])
 
+            print(f"Running: {args}")
+
             subprocess.run(args, capture_output=True, shell=False)
 
             new_image = Image.open(filename).convert('RGB')
             images.save_image(new_image, p.outpath_samples, f'resized_{i}.png', processed.all_seeds[i], processed.all_prompts[i], opts.samples_format, info=processed.info, p=p)
             processed.images.insert(0, new_image)
 
-        os.remove(temp_image_path)
+        # os.remove(temp_image_path)
         return processed
