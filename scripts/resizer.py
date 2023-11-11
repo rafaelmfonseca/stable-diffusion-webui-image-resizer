@@ -27,23 +27,41 @@ class Script(scripts.Script):
     def show(self, is_img2img):
         return True
     def ui(self, is_img2img):
+        gr.HTML("<br />")
+        
         with gr.Row():
             method = gr.Dropdown(choices=methods(), label="Method", value="NearestNeighbor <GDI+>", type="value")
+
+        gr.HTML("<br />")
+
+        with gr.Row().style():
+            with gr.Column(scale=2):
+                with gr.Tabs():
+                    with gr.TabItem('Target Resolution'):
+                        width = gr.Slider(minimum=1, maximum=512, step=1, value=48, label="Width")
+                        height = gr.Slider(minimum=1, maximum=512, step=1, value=48, label="Height")
+            with gr.Column(scale=2):
+                with gr.Tabs():
+                    with gr.TabItem('Border pixel handling'):
+                        pixel_handling_horizontally = gr.Dropdown(choices=borderPixelHandles(), label="Horizontally", value="None", type="value")
+                        pixel_handling_vertically = gr.Dropdown(choices=borderPixelHandles(), label="Vertically", value="None", type="value")
+
+        gr.HTML("<br />")
+
         with gr.Row():
-            width = gr.Slider(minimum=1, maximum=512, step=1, value=48, label="Width")
-            height = gr.Slider(minimum=1, maximum=512, step=1, value=48, label="Height")
-        with gr.Row():
-            keep_aspect = gr.Checkbox(label='Keep Aspect', value=False)
-        with gr.Row():
-            pixel_handling_horizontally = gr.Dropdown(choices=borderPixelHandles(), label="Horizontally", value="None", type="value")
-            pixel_handling_vertically = gr.Dropdown(choices=borderPixelHandles(), label="Vertically", value="None", type="value")
-        with gr.Row():
-            use_thresholds = gr.Checkbox(label='Use Thresholds', value=False)
-            thresholds_repeat = gr.Slider(minimum=1, maximum=512, step=1, value=1, label="Repeat")
-            use_centered_grid = gr.Checkbox(label='Use Centered Grid', value=False)
-            centered_grid_repeat = gr.Slider(minimum=1, maximum=512, step=1, value=1, label="Repeat")
-        return [method, width, height, keep_aspect, pixel_handling_horizontally, pixel_handling_vertically, use_thresholds, thresholds_repeat, use_centered_grid, centered_grid_repeat]
-    def run(self, p, method, width, height, keep_aspect, pixel_handling_horizontally, pixel_handling_vertically, use_thresholds, thresholds_repeat, use_centered_grid, centered_grid_repeat):
+            with gr.Tabs():
+                with gr.TabItem('Advanced'):
+                    with gr.Row():
+                        use_thresholds = gr.Checkbox(label='Use Thresholds', value=False)
+                    with gr.Row():
+                        repeat = gr.Slider(minimum=1, maximum=512, step=1, value=1, label="Repeat")
+                    with gr.Row():
+                        use_centered_grid = gr.Checkbox(label='Use Centered Grid', value=False)
+                    with gr.Row():
+                        radius = gr.Slider(minimum=0.5, maximum=100, step=0.1, value=1, label="Radius")
+        
+        return [method, width, height, pixel_handling_horizontally, pixel_handling_vertically, use_thresholds, repeat, use_centered_grid, radius]
+    def run(self, p, method, width, height, pixel_handling_horizontally, pixel_handling_vertically, use_thresholds, repeat, use_centered_grid, radius):
         fix_seed(p)
         
         random_key = uuid.uuid4().hex
@@ -57,9 +75,13 @@ class Script(scripts.Script):
 
             paramslist = []
             if use_thresholds:
-                paramslist.append(f'thresholds={thresholds_repeat}')
+                paramslist.append(f'thresholds=1')
             if use_centered_grid:
-                paramslist.append(f'centered={centered_grid_repeat}')
+                paramslist.append(f'centered=1')
+            if radius:
+                paramslist.append(f'radius={radius}')
+            if repeat:
+                paramslist.append(f'repeat={repeat}')
             if pixel_handling_vertically != "None":
                 paramslist.append(f'vbounds={pixel_handling_vertically}')
             if pixel_handling_horizontally != "None":
@@ -81,5 +103,5 @@ class Script(scripts.Script):
             images.save_image(new_image, p.outpath_samples, f'resized_{i}.png', processed.all_seeds[i], processed.all_prompts[i], opts.samples_format, info=processed.info, p=p)
             processed.images.insert(0, new_image)
 
-        # os.remove(temp_image_path)
+        os.remove(temp_image_path)
         return processed
