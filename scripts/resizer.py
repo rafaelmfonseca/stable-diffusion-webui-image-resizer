@@ -12,9 +12,10 @@ import sys
 import uuid
 
 script_dir = scripts.basedir()
+image_resizer_path = os.path.join(script_dir, "2dimagefilter", "ImageResizer-r129.exe")
 
 def borderPixelHandles():
-    handles = [ "ConstantExtension", "HalfSampleSymmetric", "WholeSampleSymmetric", "WrapAround" ]
+    handles = [ "None", "ConstantExtension", "HalfSampleSymmetric", "WholeSampleSymmetric", "WrapAround" ]
     return handles
 
 def methods():
@@ -46,24 +47,41 @@ class Script(scripts.Script):
     def run(self, p, method, width, height, keep_aspect, pixel_handling_horizontally, pixel_handling_vertically, use_thresholds, thresholds_repeat, use_centered_grid, centered_grid_repeat):
         fix_seed(p)
         
-        def resize_image(im):
-            temp_image_path = os.path.join(script_dir)
-            images.save_image(processed.images[0], temp_image_path, "prompt_matrix", prompt=processed.prompt, seed=processed.seed, grid=True, p=p)
-            # temp_image_path = os.path.join(script_dir, f'temp.png')
-            # im = im.convert("RGB")
-            # im.save(temp_image_path)
-            # imageresizer_path = os.path.join(script_dir, "2dimagefilter", "ImageResizer-r129.exe")
-            # cmd = f'{imageresizer_path} /load "{temp_image_path}" /resize auto "{method}" /resize w{width} h{height} "HighQualityBilinear <GDI+>" /save output.png'
-            # os.system(cmd)
-            # os.remove(temp_image_path)
-            return im
-        # out = process_images(p)
-        # for i in range(len(out.images)):
-        #     out.images[i] = resize_image(out.images[i])
-
+        random_key = uuid.uuid4().hex
         processed = process_images(p)
-
-        for i in range(len(processed.images)):
-            processed.images[i] = resize_image(processed.images[i])
-
+        temp_image_path = os.path.join(script_dir, "temp", random_key)
         
+        for i in range(len(processed.images)):
+            fullfn, txt_fullfn = images.save_image(processed.images[i], temp_image_path, "prompt_matrix", prompt=processed.prompt, seed=processed.seed, grid=True, p=p)
+
+            filename = os.path.join(temp_image_path, f'output_{i}.png')
+
+            paramslist = []
+            if use_thresholds:
+                paramslist.append(f'thresholds={thresholds_repeat}')
+            if use_centered_grid:
+                paramslist.append(f'centered={centered_grid_repeat}')
+            if pixel_handling_vertically != "None":
+                paramslist.append(f'vbounds={pixel_handling_vertically}')
+            if pixel_handling_horizontally != "None":
+                paramslist.append(f'hbounds={pixel_handling_horizontally}')
+
+            params = ""
+            if len(paramslist) > 0:
+                params = "(" + ",".join(paramslist) + ")"
+
+            args = []
+            args.append(image_resizer_path)
+            args.extend(["/load", fullfn])
+            args.extend(["/resize", f'{width}x{height}', f"{method}{params}"])
+            args.extend(["/save", filename])
+
+            print(f'args={args}')
+
+            result = subprocess.run(args, capture_output=True, shell=False)
+
+            #result = subprocess.run([image_resizer_path, "/load", fullfn, "/resize", 'auto', 'XBR 3x(2)', "/resize", 'w1024', "HighQualityBilinear <GDI+>", "/save", filename], capture_output=True, shell=False)
+
+            # print(f'result={result}')
+
+        # os.remove(temp_image_path)
