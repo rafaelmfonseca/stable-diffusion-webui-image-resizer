@@ -190,7 +190,7 @@ class Script(scripts.Script):
 
         gr.HTML("<br />")
 
-        with gr.Row().style():
+        with gr.Row():
             with gr.Column(scale=2):
                 with gr.Tabs():
                     with gr.TabItem('Target Resolution'):
@@ -240,7 +240,7 @@ class Script(scripts.Script):
                 paramslist.append(f'repeat={repeat}')
 
             if method["enable_use_centered_grid"]:
-                paramslist.append(f'centered={use_centered_grid and 1 or 0}}')
+                paramslist.append(f'centered={use_centered_grid and 1 or 0}')
             if method["enable_radius"] and radius:
                 paramslist.append(f'radius={radius}')
 
