@@ -194,27 +194,34 @@ class Script(scripts.Script):
             with gr.Column(scale=2):
                 with gr.Tabs():
                     with gr.TabItem('Target Resolution'):
-                        width = gr.Slider(minimum=1, maximum=512, step=1, value=48, label="Width")
-                        height = gr.Slider(minimum=1, maximum=512, step=1, value=48, label="Height")
+                        with gr.Row() as resolution_panel:
+                            width = gr.Slider(minimum=1, maximum=512, step=1, value=48, label="Width", elem_id="image_resizer_width")
+                            height = gr.Slider(minimum=1, maximum=512, step=1, value=48, label="Height", elem_id="image_resizer_height")
             with gr.Column(scale=2):
                 with gr.Tabs():
                     with gr.TabItem('Border pixel handling'):
-                        hbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Horizontally", value=0, type="index")
-                        vbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Vertically", value=0, type="index")
+                        with gr.Row() as bounds_panel:
+                            hbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Horizontally", value=0, type="index")
+                            vbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Vertically", value=0, type="index")
 
         gr.HTML("<br />")
 
         with gr.Row():
             with gr.Tabs():
                 with gr.TabItem('Advanced'):
-                    with gr.Row():
+                    with gr.Row() as thresholds_panel:
                         use_thresholds = gr.Checkbox(label='Use Thresholds', value=False)
-                    with gr.Row():
+                    with gr.Row() as repeat_panel:
                         repeat = gr.Slider(minimum=1, maximum=10, step=1, value=1, label="Repeat")
-                    with gr.Row():
+                    with gr.Row() as centered_grid_panel:
                         use_centered_grid = gr.Checkbox(label='Use Centered Grid', value=False)
-                    with gr.Row():
+                    with gr.Row() as radius_panel:
                         radius = gr.Slider(minimum=0.5, maximum=100, step=0.1, value=1, label="Radius")
+        
+        def toggles_panels(mi):
+            return gr.update(visible=self.methods[mi]["enable_width"]), gr.update(visible=self.methods[mi]["enable_hbounds"]), gr.update(visible=self.methods[mi]["enable_use_thresholds"]), gr.update(visible=self.methods[mi]["enable_repeat"]), gr.update(visible=self.methods[mi]["enable_use_centered_grid"]), gr.update(visible=self.methods[mi]["enable_radius"])
+
+        method_index.change(fn=toggles_panels, inputs=[method_index], outputs=[resolution_panel, bounds_panel, thresholds_panel, repeat_panel, centered_grid_panel, radius_panel])
         
         return [method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius]
 
