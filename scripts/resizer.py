@@ -2,6 +2,7 @@ from PIL import Image,features
 import modules.scripts as scripts
 from modules import images
 from modules.processing import process_images, fix_seed
+from modules.ui_components import ToolButton
 from modules.shared import opts
 import io
 import gradio as gr
@@ -12,6 +13,8 @@ import uuid
 
 script_dir = scripts.basedir()
 image_resizer_path = os.path.join(script_dir, "2dimagefilter", "ImageResizer-r129.exe")
+save_symbol = '\U0001f4be'  # 💾
+paste_symbol = '\u2199\ufe0f'  # ↙
 
 def interpolators_type_methods():
     handles = [ "NearestNeighbor <GDI+>", "Bilinear <GDI+>", "Bicubic <GDI+>", "HighQualityBilinear <GDI+>", "HighQualityBicubic <GDI+>" ]
@@ -176,6 +179,8 @@ class Script(scripts.Script):
         self.methods.extend(nq_scaler_type_methods())
         self.methods.extend(planes_type_methods())
 
+        self.resize_config_storage_txt = ""
+
     def title(self):
         return "Image Resizer"
         
@@ -187,6 +192,8 @@ class Script(scripts.Script):
         
         with gr.Row():
             method_index = gr.Dropdown(choices=[x["label"] for x in self.methods], label="Method", value="NearestNeighbor <GDI+>", type="index")
+            save_resize_config = ToolButton(value=save_symbol)
+            paste_resize_config = ToolButton(value=paste_symbol)
 
         gr.HTML("<br />")
 
@@ -230,6 +237,49 @@ class Script(scripts.Script):
             return gr.update(visible=self.methods[mi]["enable_width"]), gr.update(visible=self.methods[mi]["enable_hbounds"]), gr.update(visible=self.methods[mi]["enable_use_thresholds"]), gr.update(visible=self.methods[mi]["enable_repeat"]), gr.update(visible=self.methods[mi]["enable_use_centered_grid"]), gr.update(visible=self.methods[mi]["enable_radius"])
 
         method_index.change(fn=toggles_panels, inputs=[method_index], outputs=[resolution_panel, bounds_panel, thresholds_panel, repeat_panel, centered_grid_panel, radius_panel])
+
+        save_resize_config.click(
+            fn=None,
+            _js="""
+                (method, width, height, hbounds, vbounds, use_thresholds, repeat, use_centered_grid, radius, resize_to_original) => {
+                    const obj = {
+                        method: method.toString(),
+                        width: width.toString(),
+                        height: height.toString(),
+                        hbounds: hbounds.toString(),
+                        vbounds: vbounds.toString(),
+                        use_thresholds: use_thresholds.toString(),
+                        repeat: repeat.toString(),
+                        use_centered_grid: use_centered_grid.toString(),
+                        radius: radius.toString(),
+                        resize_to_original: resize_to_original.toString()
+                    };
+                    localStorage.setItem('resize_config', JSON.stringify(obj))
+                }
+            """,
+            inputs=[method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius, resize_to_original],
+            outputs=None
+        )
+
+        """
+        def restore_resize_config(config):
+            print(f'config: {config}')
+            return gr.update(value="Red")
+
+        resize_config_storage = "aa"
+
+        paste_resize_config.click(
+            fn=None,
+            _js="function(a){return [localStorage.getItem('resize_config')]}",
+            inputs=[resize_config_storage],
+            outputs=[resize_config_storage]
+        ).then(
+            fn=restore_resize_config,
+            _js=None,
+            inputs=[resize_config_storage],
+            outputs=[method_index]
+        )
+        """
         
         return [method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius, resize_to_original]
 
