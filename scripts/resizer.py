@@ -320,8 +320,6 @@ class Script(scripts.Script):
             args.append(image_resizer_path)
             args.extend(["/load", fullfn])
             args.extend(["/resize", size_param, f'{method["value"]}{params}'])
-            if resize_to_original:
-                args.extend(["/resize", "w512", "NearestNeighbor <GDI+>"])
             args.extend(["/save", filename])
 
             print(f"Running: {args}")
@@ -331,6 +329,21 @@ class Script(scripts.Script):
             new_image = Image.open(filename).convert('RGB')
             images.save_image(new_image, p.outpath_samples, f'resized_{i}.png', processed.all_seeds[i], processed.all_prompts[i], opts.samples_format, info=processed.info, p=p)
             processed.images.insert(0, new_image)
+
+            if resize_to_original:
+                filename_orig = os.path.join(temp_image_path, f'output_{i}_original.png')
+
+                args = []
+                args.append(image_resizer_path)
+                args.extend(["/load", filename])
+                args.extend(["/resize", "w512", "NearestNeighbor <GDI+>"])
+                args.extend(["/save", filename_orig])
+
+                subprocess.run(args, capture_output=True, shell=False)
+
+                new_image_orig = Image.open(filename_orig).convert('RGB')
+                images.save_image(new_image_orig, p.outpath_samples, f'resized_{i}_original.png', processed.all_seeds[i], processed.all_prompts[i], opts.samples_format, info=processed.info, p=p)
+                processed.images.insert(0, new_image_orig)
 
         # os.remove(temp_image_path)
         return processed
