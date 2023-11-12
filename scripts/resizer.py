@@ -1,15 +1,17 @@
-from PIL import Image,features
+from PIL import Image
 import modules.scripts as scripts
 from modules import images
 from modules.processing import process_images, fix_seed
 from modules.ui_components import ToolButton
 from modules.shared import opts
+from modules import shared
 import io
 import gradio as gr
 import subprocess
 import os
 import sys
 import uuid
+import json
 
 script_dir = scripts.basedir()
 image_resizer_path = os.path.join(script_dir, "2dimagefilter", "ImageResizer-r129.exe")
@@ -179,8 +181,6 @@ class Script(scripts.Script):
         self.methods.extend(nq_scaler_type_methods())
         self.methods.extend(planes_type_methods())
 
-        self.resize_config_storage_txt = ""
-
     def title(self):
         return "Image Resizer"
         
@@ -238,49 +238,43 @@ class Script(scripts.Script):
 
         method_index.change(fn=toggles_panels, inputs=[method_index], outputs=[resolution_panel, bounds_panel, thresholds_panel, repeat_panel, centered_grid_panel, radius_panel])
 
+        def save_configs(mi, w, h, hi, vi, ut, r, ucg, rad, rto):
+            config_value = {
+                "method_index": mi,
+                "width": w,
+                "height": h,
+                "hbounds_index": hi,
+                "vbounds_index": vi,
+                "use_thresholds": ut,
+                "repeat": r,
+                "use_centered_grid": ucg,
+                "radius": rad,
+                "resize_to_original": rto
+            }
+            section = ('image-resize', "Image Resize")
+            shared.opts.add_option("image_resizer_config", shared.OptionInfo(json.dumps(config_value), "Saved config for image resizer", section=section))
+            shared.opts.save(shared.config_filename)
+
         save_resize_config.click(
-            fn=None,
-            _js="""
-                (method, width, height, hbounds, vbounds, use_thresholds, repeat, use_centered_grid, radius, resize_to_original) => {
-                    const obj = {
-                        method: method.toString(),
-                        width: width.toString(),
-                        height: height.toString(),
-                        hbounds: hbounds.toString(),
-                        vbounds: vbounds.toString(),
-                        use_thresholds: use_thresholds.toString(),
-                        repeat: repeat.toString(),
-                        use_centered_grid: use_centered_grid.toString(),
-                        radius: radius.toString(),
-                        resize_to_original: resize_to_original.toString()
-                    };
-                    localStorage.setItem('resize_config', JSON.stringify(obj))
-                }
-            """,
+            fn=save_configs,
+            _js=None,
             inputs=[method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius, resize_to_original],
             outputs=None
         )
 
-        """
-        def restore_resize_config(config):
-            print(f'config: {config}')
-            return gr.update(value="Red")
-
-        resize_config_storage = "aa"
+        def paste_configs():
+            config_value = json.loads(opts.image_resizer_config)
+            if config_value is None:
+                return
+            return gr.update(value=self.methods[config_value["method_index"]]["label"]), gr.update(value=int(config_value["width"])), gr.update(value=int(config_value["height"])), gr.update(value=self.border_pixel_handles[config_value["hbounds_index"]]["label"]), gr.update(value=self.border_pixel_handles[config_value["vbounds_index"]]["label"]), gr.update(value=config_value["use_thresholds"]), gr.update(value=config_value["repeat"]), gr.update(value=config_value["use_centered_grid"]), gr.update(value=config_value["radius"]), gr.update(value=config_value["resize_to_original"])
 
         paste_resize_config.click(
-            fn=None,
-            _js="function(a){return [localStorage.getItem('resize_config')]}",
-            inputs=[resize_config_storage],
-            outputs=[resize_config_storage]
-        ).then(
-            fn=restore_resize_config,
+            fn=paste_configs,
             _js=None,
-            inputs=[resize_config_storage],
-            outputs=[method_index]
+            inputs=None,
+            outputs=[method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius, resize_to_original]
         )
-        """
-        
+
         return [method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius, resize_to_original]
 
     def run(self, p, method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius, resize_to_original):
