@@ -186,7 +186,7 @@ class Script(scripts.Script):
         gr.HTML("<br />")
         
         with gr.Row():
-            method_index = gr.Dropdown(choices=[x["label"] for x in self.methods], label="Method", value=0, type="index")
+            method_index = gr.Dropdown(choices=[x["label"] for x in self.methods], label="Method", value="NearestNeighbor <GDI+>", type="index")
 
         gr.HTML("<br />")
 
@@ -201,8 +201,8 @@ class Script(scripts.Script):
                 with gr.Tabs():
                     with gr.TabItem('Border pixel handling'):
                         with gr.Row() as bounds_panel:
-                            hbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Horizontally", value=0, type="index")
-                            vbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Vertically", value=0, type="index")
+                            hbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Horizontally", value="ConstantExtension", type="index")
+                            vbounds_index = gr.Dropdown(choices=[x["label"] for x in self.border_pixel_handles], label="Vertically", value="ConstantExtension", type="index")
 
         gr.HTML("<br />")
 
@@ -217,15 +217,23 @@ class Script(scripts.Script):
                         use_centered_grid = gr.Checkbox(label='Use Centered Grid', value=False)
                     with gr.Row() as radius_panel:
                         radius = gr.Slider(minimum=0.5, maximum=100, step=0.1, value=1, label="Radius")
+
+        gr.HTML("<br />")
+
+        with gr.Row():
+            with gr.Tabs():
+                with gr.TabItem('Extras'):
+                    with gr.Row():
+                        resize_to_original = gr.Checkbox(label='Resize to 512x512 (Pixelated)', value=False)
         
         def toggles_panels(mi):
             return gr.update(visible=self.methods[mi]["enable_width"]), gr.update(visible=self.methods[mi]["enable_hbounds"]), gr.update(visible=self.methods[mi]["enable_use_thresholds"]), gr.update(visible=self.methods[mi]["enable_repeat"]), gr.update(visible=self.methods[mi]["enable_use_centered_grid"]), gr.update(visible=self.methods[mi]["enable_radius"])
 
         method_index.change(fn=toggles_panels, inputs=[method_index], outputs=[resolution_panel, bounds_panel, thresholds_panel, repeat_panel, centered_grid_panel, radius_panel])
         
-        return [method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius]
+        return [method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius, resize_to_original]
 
-    def run(self, p, method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius):
+    def run(self, p, method_index, width, height, hbounds_index, vbounds_index, use_thresholds, repeat, use_centered_grid, radius, resize_to_original):
         fix_seed(p)
         
         random_key = uuid.uuid4().hex
@@ -251,9 +259,9 @@ class Script(scripts.Script):
             if method["enable_radius"] and radius:
                 paramslist.append(f'radius={radius}')
 
-            if method["enable_vbounds"] and vbounds_index > 0:
+            if method["enable_vbounds"] and vbounds_index is not None and vbounds_index > 0:
                 paramslist.append(f'vbounds={self.border_pixel_handles[vbounds_index]["value"]}')
-            if method["enable_hbounds"] and hbounds_index > 0:
+            if method["enable_hbounds"] and hbounds_index is not None and hbounds_index > 0:
                 paramslist.append(f'hbounds={self.border_pixel_handles[hbounds_index]["value"]}')
 
             params = ""
@@ -268,6 +276,8 @@ class Script(scripts.Script):
             args.append(image_resizer_path)
             args.extend(["/load", fullfn])
             args.extend(["/resize", size_param, f'{method["value"]}{params}'])
+            if resize_to_original:
+                args.extend(["/resize", "w512", "NearestNeighbor <GDI+>"])
             args.extend(["/save", filename])
 
             print(f"Running: {args}")
